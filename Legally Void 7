@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legally Void: Partner Track</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --bg: #0f172a;
+            --paper: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: #f8fafc;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 500px;
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            position: sticky;
+            top: 10px;
+            z-index: 10;
+        }
+
+        .stat-value { font-size: 1.2rem; font-weight: bold; color: var(--primary); }
+        
+        .progress-wrapper { width: 100%; max-width: 500px; margin-bottom: 15px; }
+        .progress-bg { background: #334155; height: 8px; border-radius: 4px; }
+        #progress-fill { background: var(--success); width: 0%; height: 100%; transition: 0.3s; }
+
+        .contract-paper {
+            background: var(--paper);
+            color: #1e293b;
+            padding: 40px 30px;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            line-height: 1.8;
+        }
+
+        .red-flag {
+            background: #fee2e2;
+            border-bottom: 2px dashed var(--danger);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .found { 
+            background: #dcfce7 !important; 
+            border-bottom: 2px solid var(--success) !important;
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        #game-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            color: #1e293b;
+            padding: 25px;
+            border-radius: 20px;
+            width: 85%;
+            max-width: 400px;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            border: 2px solid #f1f5f9;
+            border-radius: 10px;
+            background: #f8fafc;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        #end-screen {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        button.main-btn {
+            background: var(--primary);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-ui">
+    <div class="stats-bar">
+        <div class="stat-box">Score: <span id="score-val" class="stat-value">0</span></div>
+        <div class="stat-box">Time: <span id="timer-val" class="stat-value">60</span>s</div>
+    </div>
+
+    <div class="progress-wrapper">
+        <div class="progress-bg"><div id="progress-fill"></div></div>
+    </div>
+
+    <div class="contract-paper">
+        <h2 style="text-align: center;">ASSET TRANSFER DEED</h2>
+        
+        <p><b>SECTION 1:</b> This agreement is between MegaCorp and <span class="red-flag" data-id="1">a 7-year-old child</span>. 
+        The subject of sale is a <span class="red-flag" data-id="2">collection of stolen paintings</span>. 
+        Both parties agree that <span class="red-flag" data-id="3">gravity does not exist</span> on the property premises.</p>
+
+        <p><b>SECTION 2:</b> The Buyer signed this while the Seller held a <span class="red-flag" data-id="4">loaded crossbow to their head</span>. 
+        The Seller, a high-ranking priest, used <span class="red-flag" data-id="5">spiritual fear and guilt</span> to convince the elderly Buyer to sign. 
+        The Buyer was told they were signing a <span class="red-flag" data-id="6">get-well card</span>, not a deed.</p>
+
+        <p><b>SECTION 3:</b> The price is set at $1.00 for a $5M mansion because the Seller <span class="red-flag" data-id="7">preyed on the Buyer's illiteracy</span>. 
+        Finally, both parties mistakenly believe the house is <span class="red-flag" data-id="8">located on Mars</span>, which is factually impossible.</p>
+    </div>
+</div>
+
+<div id="end-screen">
+    <h1 id="end-title">RESULTS</h1>
+    <p id="end-subtitle"></p>
+    <button class="main-btn" onclick="resetGame()">PLAY AGAIN</button>
+</div>
+
+<div id="game-modal">
+    <div class="modal-content">
+        <h3 id="q-text">Legal Defect?</h3>
+        <div id="options"></div>
+    </div>
+</div>
+
+<script>
+    let score = 0;
+    let timeLeft = 60;
+    let foundCount = 0;
+    let gameActive = true;
+    let timerInterval;
+
+    const data = {
+        "1": { q: "Contracting with a minor is...", options: ["Incapacity", "Illegality", "Standard"], correct: "Incapacity" },
+        "2": { q: "Selling stolen goods is...", options: ["Statutory Illegality", "Mistake", "Duress"], correct: "Statutory Illegality" },
+        "3": { q: "Terms that defy physics are...", options: ["Legal Impossibility", "Negligence", "Bad Luck"], correct: "Legal Impossibility" },
+        "4": { q: "Signing under physical threat is...", options: ["Duress", "Undue Influence", "Persuasion"], correct: "Duress" },
+        "5": { q: "Abusing a position of trust/power is...", options: ["Undue Influence", "Duress", "Marketing"], correct: "Undue Influence" },
+        "6": { q: "Lying about the document type is...", options: ["Non Est Factum", "Minor Error", "Puffery"], correct: "Non Est Factum" },
+        "7": { q: "Exploiting a major power imbalance is...", options: ["Unconscionability", "Smart Business", "Incapacity"], correct: "Unconscionability" },
+        "8": { q: "Both parties being wrong about a fact is...", options: ["Mutual Mistake", "Misrepresentation", "Opinion"], correct: "Mutual Mistake" }
+    };
+
+    function startGame() {
+        score = 0;
+        timeLeft = 60;
+        foundCount = 0;
+        gameActive = true;
+        updateUI();
+        
+        document.querySelectorAll('.red-flag').forEach(f => f.classList.remove('found'));
+        document.getElementById('game-ui').style.display = 'block';
+        document.getElementById('end-screen').style.display = 'none';
+
+        timerInterval = setInterval(() => {
+            if (!gameActive) return;
+            timeLeft--;
+            document.getElementById('timer-val').innerText = timeLeft;
+            if (timeLeft <= 0) endGame("TIME EXPIRED");
+        }, 1000);
+    }
+
+    document.querySelectorAll('.red-flag').forEach(flag => {
+        flag.addEventListener('click', () => {
+            if (!gameActive || flag.classList.contains('found')) return;
+            openQuestion(flag);
+        });
+    });
+
+    function openQuestion(el) {
+        const info = data[el.getAttribute('data-id')];
+        const modal = document.getElementById('game-modal');
+        const optContainer = document.getElementById('options');
+        
+        optContainer.innerHTML = '';
+        document.getElementById('q-text').innerText = info.q;
+
+        info.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerText = opt;
+            btn.onclick = () => {
+                if (opt === info.correct) {
+                    score += 100 + (timeLeft * 2);
+                    foundCount++;
+                    el.classList.add('found');
+                    updateUI();
+                    modal.style.display = 'none';
+                    if (foundCount === 8) endGame("CONTRACT DESTROYED!");
+                } else {
+                    timeLeft -= 7;
+                    modal.style.display = 'none';
+                    alert("WRONG! That's a 7-second penalty!");
+                }
+            };
+            optContainer.appendChild(btn);
+        });
+        modal.style.display = 'flex';
+    }
+
+    function updateUI() {
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('progress-fill').style.width = (foundCount / 8 * 100) + "%";
+    }
+
+    function endGame(title) {
+        gameActive = false;
+        clearInterval(timerInterval);
+        document.getElementById('game-ui').style.display = 'none';
+        document.getElementById('end-screen').style.display = 'block';
+        document.getElementById('end-title').innerText = title;
+        document.getElementById('end-subtitle').innerText = `Final Score: ${score} | Flags Found: ${foundCount}/8`;
+    }
+
+    function resetGame() {
+        clearInterval(timerInterval);
+        startGame();
+    }
+
+    startGame();
+</script>
+</body>
+</html>
