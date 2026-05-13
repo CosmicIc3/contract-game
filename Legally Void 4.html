@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Legally Void</title>
+    <style>
+        :root { --primary: #6366f1; --danger: #ef4444; --success: #22c55e; --bg: #0f172a; --paper: #ffffff; --ink: #1e293b; }
+        body { font-family: sans-serif; background-color: var(--bg); color: #f8fafc; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; -webkit-text-size-adjust: 100%; }
+        .stats-bar { display: flex; justify-content: space-between; width: 100%; max-width: 450px; background: #1e293b; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; }
+        .stat-value { font-size: 20px; font-weight: bold; color: var(--primary); display: block; text-align: center; }
+        .progress-bg { width: 100%; max-width: 450px; height: 10px; background: #334155; border-radius: 5px; margin-bottom: 20px; overflow: hidden; }
+        #progress-fill { background: var(--success); width: 0%; height: 100%; transition: width 0.3s; }
+        .contract-paper { background: var(--paper); color: var(--ink); padding: 30px; border-radius: 4px; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); line-height: 1.7; font-size: 16px; min-height: 250px; box-sizing: border-box; }
+        .factor { cursor: pointer; border-bottom: 1px dashed #ccc; -webkit-tap-highlight-color: rgba(99, 102, 241, 0.2); }
+        .failed { background-color: #fee2e2; color: var(--danger); border-bottom: 2px solid var(--danger); }
+        .solved { background-color: #dcfce7; color: #166534; text-decoration: line-through; pointer-events: none; }
+        #game-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 9999; }
+        .modal-content { background: white; color: var(--ink); padding: 25px; border-radius: 15px; width: 85%; max-width: 320px; text-align: center; }
+        .choice-btn { display: block; width: 100%; padding: 15px; margin: 10px 0; border: 2px solid #e2e8f0; border-radius: 10px; font-weight: bold; font-size: 16px; background: #fff; cursor: pointer; }
+        #end-screen { display: none; text-align: center; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+    <div id="game-ui">
+        <div class="stats-bar">
+            <div>TIME <span id="timer-val" class="stat-value">60</span></div>
+            <div id="scenario-name" style="color:#94a3b8; font-size:12px; padding-top:5px">INITIALIZING...</div>
+            <div>SCORE <span id="score-val" class="stat-value">0</span></div>
+        </div>
+        <div class="progress-bg"><div id="progress-fill"></div></div>
+        <div class="contract-paper" id="contract-content">Loading Legal Document...</div>
+    </div>
+
+    <div id="end-screen">
+        <h1 id="end-title">FINISH</h1>
+        <p id="end-subtitle"></p>
+        <button class="choice-btn" style="background:var(--primary); color:white" onclick="location.reload()">NEXT CASE</button>
+    </div>
+
+    <div id="game-modal">
+        <div class="modal-content">
+            <h3 id="q-text">Identify Issue:</h3>
+            <div id="options"></div>
+        </div>
+    </div>
+
+    <script>
+        // Use a self-invoking function to avoid global conflicts
+        (function() {
+            const scenarios = [
+                {
+                    title: "EMPLOYMENT AUDIT",
+                    html: `I, Applicant, agree to work for <span class="factor" data-id="1">zero dollars per hour</span>. I am signing this because my boss <span class="factor" data-id="2">threatened to hit me</span>. I agree to assist in <span class="factor" data-id="3">selling stolen cars</span>. I am <span class="factor" data-id="4">only 10 years old</span>.`,
+                    logic: {
+                        "1": { q: "No wages is...", options: ["Lack of Consideration", "Fair", "Standard"], correct: "Lack of Consideration" },
+                        "2": { q: "Physical threats are...", options: ["Duress", "Motivation", "Legal"], correct: "Duress" },
+                        "3": { q: "Stolen cars make this...", options: ["Illegal", "Profitable", "Valid"], correct: "Illegal" },
+                        "4": { q: "A 10-year-old has...", options: ["Incapacity", "Maturity", "Rights"], correct: "Incapacity" }
+                    }
+                }
+            ];
+
+            let score = 0;
+            let timeLeft = 60;
+            let foundCount = 0;
+            let gameActive = true;
+            let currentScenario = scenarios[0];
+
+            function start() {
+                const content = document.getElementById('contract-content');
+                const timerDisplay = document.getElementById('timer-val');
+                
+                if(!content) return; // Guard clause
+
+                content.innerHTML = currentScenario.html;
+                document.getElementById('scenario-name').innerText = currentScenario.title;
+
+                const clock = setInterval(() => {
+                    if (!gameActive) { clearInterval(clock); return; }
+                    timeLeft--;
+                    timerDisplay.innerText = timeLeft;
+                    if (timeLeft <= 0) endGame("OUT OF TIME");
+                }, 1000);
+
+                content.onclick = (e) => {
+                    if (e.target.classList.contains('factor') && !e.target.classList.contains('solved')) {
+                        handleChoice(e.target);
+                    }
+                };
+            }
+
+            function handleChoice(el) {
+                const info = currentScenario.logic[el.getAttribute('data-id')];
+                const modal = document.getElementById('game-modal');
+                const optBox = document.getElementById('options');
+                
+                document.getElementById('q-text').innerText = info.q;
+                optBox.innerHTML = '';
+                modal.style.display = 'flex';
+
+                info.options.sort(() => Math.random() - 0.5).forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'choice-btn';
+                    btn.innerText = opt;
+                    btn.onclick = () => {
+                        if (opt === info.correct) {
+                            score += 1000;
+                            foundCount++;
+                            el.className = 'factor solved';
+                            document.getElementById('progress-fill').style.width = (foundCount / 4 * 100) + "%";
+                            document.getElementById('score-val').innerText = score;
+                            modal.style.display = 'none';
+                            if (foundCount === 4) endGame("CONTRACT VOIDED");
+                        } else {
+                            timeLeft -= 10;
+                            el.className = 'factor failed';
+                            modal.style.display = 'none';
+                        }
+                    };
+                    optBox.appendChild(btn);
+                });
+            }
+
+            function endGame(msg) {
+                gameActive = false;
+                document.getElementById('game-ui').style.display = 'none';
+                document.getElementById('end-screen').style.display = 'block';
+                document.getElementById('end-title').innerText = msg;
+                document.getElementById('end-subtitle').innerText = "Score: " + score;
+            }
+
+            // Fire when page is ready
+            if (document.readyState === "complete" || document.readyState === "interactive") {
+                start();
+            } else {
+                document.addEventListener("DOMContentLoaded", start);
+            }
+        })();
+    </script>
+</body>
+</html>
