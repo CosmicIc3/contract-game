@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legally Void: Highlight Edition</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --bg: #0f172a;
+            --paper: #ffffff;
+            --ink: #0f172a;
+            /* Highlighting colors */
+            --hl-pending: #fef08a; /* Soft yellow highlight */
+            --hl-hover: #fde047;   /* Brighter yellow on hover */
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            background-color: var(--bg);
+            color: #f8fafc;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Stats & Header */
+        .game-header {
+            width: 100%;
+            max-width: 650px;
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            position: sticky;
+            top: 5px;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
+        select#diff-selector {
+            background: #0f172a;
+            color: white;
+            border: 1px solid var(--primary);
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .stat-val { font-family: sans-serif; font-weight: bold; color: var(--primary); }
+        .progress-bg { background: #334155; height: 8px; border-radius: 4px; overflow: hidden; }
+        #progress-fill { background: var(--success); width: 0%; height: 100%; transition: 0.4s; }
+
+        /* The Document & Highlights */
+        .contract-container {
+            background: var(--paper);
+            color: var(--ink);
+            padding: 50px;
+            max-width: 650px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .red-flag {
+            background-color: var(--hl-pending);
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: background-color 0.2s, transform 0.1s;
+            display: inline;
+        }
+
+        .red-flag:hover {
+            background-color: var(--hl-hover);
+            transform: translateY(-1px);
+        }
+
+        .found {
+            background-color: #dcfce7 !important; /* Green highlight */
+            color: #166534;
+            text-decoration: line-through;
+            cursor: default;
+            transform: none !important;
+        }
+
+        /* Modal styling */
+        #game-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-body {
+            background: white;
+            color: var(--ink);
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #f8fafc;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        #start-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<div id="start-overlay">
+    <h1 style="color: white;">LEGAL AUDITOR</h1>
+    <p style="color: #94a3b8;">Spot the highlighted defects in the contract.</p>
+    <select id="initial-diff" style="padding: 10px; border-radius: 5px;">
+        <option value="easy">Easy (Elementary)</option>
+        <option value="medium">Medium (Canada Law 12)</option>
+        <option value="hard">Hard (Corporate Law)</option>
+    </select>
+    <button onclick="firstStart()" style="margin-top:20px; padding: 15px 40px; border-radius:30px; border:none; background:var(--primary); color:white; cursor:pointer; font-weight:bold;">START GAME</button>
+</div>
+
+<div id="game-view" style="display:none">
+    <div class="game-header">
+        <div class="top-row">
+            <select id="diff-selector" onchange="resetGame(this.value)">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+            <div class="stats">
+                <div style="color:white">Score: <span id="score-val" class="stat-val">0</span></div>
+                <div style="color:white">Time: <span id="timer-val" class="stat-val">120</span>s</div>
+            </div>
+        </div>
+        <div class="progress-bg"><div id="progress-fill"></div></div>
+    </div>
+
+    <div class="contract-container" id="contract-content">
+        <!-- Text content loaded via levels object -->
+    </div>
+</div>
+
+<div id="game-modal">
+    <div class="modal-body">
+        <h4 id="q-text" style="margin-top:0; font-family:sans-serif;">Legal Defect Analysis:</h4>
+        <div id="options"></div>
+    </div>
+</div>
+
+<script>
+    // Copy the 'levels' object from the previous code here (Easy, Medium, Hard data)
+    // For brevity, I've truncated the text to show the highlight mechanic:
+    const levels = {
+        easy: {
+            title: "The Playground Trade",
+            text: `<h2 style="text-align:center">BICYCLE TRADE DEED</h2>
+            <p>This trade is between Billy and <span class="red-flag" data-id="1">Little Timmy (age 4)</span>. Billy will give Timmy a bike. In exchange, Timmy will give Billy <span class="red-flag" data-id="2">stolen cookies</span>. Billy says the bike is made of <span class="red-flag" data-id="3">pure magic and can fly</span>. Timmy agrees to give Billy <span class="red-flag" data-id="4">absolutely nothing</span> for the helmet. Timmy is signing because Billy is <span class="red-flag" data-id="5">holding his teddy bear over a puddle</span>. Billy told Timmy this is a <span class="red-flag" data-id="6">dinosaur drawing</span>. Timmy is currently <span class="red-flag" data-id="7">fast asleep</span>. Both boys think the bike is <span class="red-flag" data-id="8">made of chocolate</span>. Billy promised the bike <span class="red-flag" data-id="9">will make Timmy a giant</span>. Finally, the paper says Timmy <span class="red-flag" data-id="10">can never talk to his mom</span>.</p>`,
+            data: { /* Same 10 data points as previous response */ 
+                "1": { q: "Why is Timmy a problem?", options: ["Too young", "Too short", "Needs a haircut", "Not wearing shoes"], correct: "Too young" },
+                "2": { q: "What's wrong with the cookies?", options: ["They are stolen", "They have raisins", "They are too crunchy", "They are old"], correct: "They are stolen" },
+                "3": { q: "The 'flying magic' claim is...", options: ["A big lie", "A nice thought", "True in movies", "A secret"], correct: "A big lie" },
+                "4": { q: "Giving 'nothing' is bad because...", options: ["You must trade something", "Marbles are better", "Billy is greedy", "It's too cheap"], correct: "You must trade something" },
+                "5": { q: "The teddy bear threat is...", options: ["Forcing him to sign", "A funny joke", "A nice gesture", "Standard play"], correct: "Forcing him to sign" },
+                "6": { q: "The dinosaur lie is...", options: ["Tricking him", "A surprise", "Artistic", "Legal"], correct: "Tricking him" },
+                "7": { q: "Sleeping person lacks...", options: ["Understanding", "Winning", "Hiding", "Sleepy"], correct: "Understanding" },
+                "8": { q: "Chocolate bike idea is a...", options: ["Mistake", "Yummy idea", "Secret", "Fact"], correct: "Mistake" },
+                "9": { q: "The 'giant' promise is...", options: ["Fraud", "Magic", "Possible", "A compliment"], correct: "Fraud" },
+                "10": { q: "The 'no mommy' rule is...", options: ["Illegal rule", "A secret", "Fair", "Polite"], correct: "Illegal rule" }
+            }
+        },
+        medium: {
+            title: "Canadian Civil Agreement",
+            text: `<h2 style="text-align:center">REAL ESTATE CONTRACT</h2>
+            <p>Agreement with a <span class="red-flag" data-id="1">15-year-old student</span>. Purpose is <span class="red-flag" data-id="2">unlicensed narcotics distribution</span>. Vendor <span class="red-flag" data-id="3">hid a toxic leak</span>. Vendor has <span class="red-flag" data-id="4">advanced Alzheimer's</span>. Buyer was <span class="red-flag" data-id="5">threatened with a false lawsuit</span>. Caregiver used <span class="red-flag" data-id="6">psychological pressure</span>. Buyer thought they signed a <span class="red-flag" data-id="7">gym membership</span>. Price is $10 for a mansion due to <span class="red-flag" data-id="8">market value lies</span>. Both <span class="red-flag" data-id="9">believe the car exists</span>, but it's gone. Clause <span class="red-flag" data-id="10">waives liability for death</span>.</p>`,
+            data: {
+                "1": { q: "Minor status?", options: ["Lack of Capacity", "Minority Interest", "Void", "Standing"], correct: "Lack of Capacity" },
+                "2": { q: "Drug sales?", options: ["Void for Illegality", "Zoning", "Tort", "Permit"], correct: "Void for Illegality" },
+                "3": { q: "Toxic leak?", options: ["Fraudulent Misrepresentation", "Caveat Emptor", "Patent Defect", "Nuisance"], correct: "Fraudulent Misrepresentation" },
+                "4": { q: "Alzheimer's?", options: ["Mental Capacity", "Legal Standing", "Privity", "Power of Attorney"], correct: "Mental Capacity" },
+                "5": { q: "False lawsuit threat?", options: ["Duress", "Bargaining", "Contempt", "Stare Decisis"], correct: "Duress" },
+                "6": { q: "Caregiver pressure?", options: ["Undue Influence", "Fiduciary", "Agency", "Vicarious"], correct: "Undue Influence" },
+                "7": { q: "Gym membership lie?", options: ["Non Est Factum", "Mistake", "Parol", "Rectification"], correct: "Non Est Factum" },
+                "8": { q: "Price discrepancy?", options: ["Unconscionability", "Nominal", "Gift", "Performance"], correct: "Unconscionability" },
+                "9": { q: "Missing asset?", options: ["Mutual Mistake", "Unilateral", "Frustration", "Caveat"], correct: "Mutual Mistake" },
+                "10": { q: "Death waiver?", options: ["Against Public Policy", "Exclusion", "Warranty", "Indemnity"], correct: "Against Public Policy" }
+            }
+        },
+        hard: {
+            title: "M&A Asset Purchase",
+            text: `<h2 style="text-align:center">SHARE PURCHASE DEED</h2>
+            <p>Signed by <span class="red-flag" data-id="1">de-registered agent</span>. CEO is <span class="red-flag" data-id="2">under wardship</span>. Assets are <span class="red-flag" data-id="3">expropriated mineral rights</span>. Buyer <span class="red-flag" data-id="4">scrubbed audit logs</span>. Payment in <span class="red-flag" data-id="5">counterfeit bonds</span>. Terms require <span class="red-flag" data-id="6">price fixing</span>. Board was <span class="red-flag" data-id="7">detained in room</span>. Partner <span class="red-flag" data-id="8">dictates all decisions</span>. CEO told it was <span class="red-flag" data-id="9">an ND agreement</span>. Clause <span class="red-flag" data-id="10">ignores labor laws</span>.</p>`,
+            data: {
+                "1": { q: "De-registered agent?", options: ["Locus Standi", "Ultra Vires", "Veil", "Estoppel"], correct: "Locus Standi" },
+                "2": { q: "Wardship?", options: ["Legal Incapacity", "Conflict", "Deadlock", "Fraud"], correct: "Legal Incapacity" },
+                "3": { q: "Expropriated rights?", options: ["Mutual Mistake", "Unilateral", "Frustration", "Caveat"], correct: "Mutual Mistake" },
+                "4": { q: "Scrubbed logs?", options: ["Fraudulent Concealment", "Puffery", "Misstatement", "Warranty"], correct: "Fraudulent Concealment" },
+                "5": { q: "Counterfeit bonds?", options: ["Illegal Consideration", "Nominal", "Past", "Deed"], correct: "Illegal Consideration" },
+                "6": { q: "Price fixing?", options: ["Antitrust Illegality", "Interference", "Goodwill", "Ethics"], correct: "Antitrust Illegality" },
+                "7": { q: "Board detention?", options: ["Physical Duress", "Economic", "Activism", "Quorum"], correct: "Physical Duress" },
+                "8": { q: "Partner control?", options: ["Undue Influence", "Unconscionability", "Power", "Joint Venture"], correct: "Undue Influence" },
+                "9": { q: "ND Agreement lie?", options: ["Non Est Factum", "Mistake", "Rectification", "Performance"], correct: "Non Est Factum" },
+                "10": { q: "Labor laws?", options: ["Against Public Policy", "Exemption", "Severability", "Majeure"], correct: "Against Public Policy" }
+            }
+        }
+    };
+
+    let score = 0, timeLeft = 120, foundCount = 0, timer, currentDiff = 'easy';
+
+    function firstStart() {
+        const d = document.getElementById('initial-diff').value;
+        document.getElementById('start-overlay').style.display = 'none';
+        document.getElementById('game-view').style.display = 'block';
+        document.getElementById('diff-selector').value = d;
+        resetGame(d);
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function resetGame(diff) {
+        currentDiff = diff;
+        score = 0; foundCount = 0;
+        timeLeft = (diff === 'easy') ? 180 : (diff === 'medium' ? 120 : 90);
+        clearInterval(timer);
+        
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('timer-val').innerText = timeLeft;
+        document.getElementById('progress-fill').style.width = "0%";
+        
+        const content = levels[diff];
+        document.getElementById('contract-content').innerHTML = content.text;
+        
+        document.querySelectorAll('.red-flag').forEach(flag => {
+            flag.onclick = () => handleFlagClick(flag);
+        });
+
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-val').innerText = timeLeft;
+            if (timeLeft <= 0) endGame("AUDIT EXPIRED");
+        }, 1000);
+    }
+
+    function handleFlagClick(flag) {
+        if (flag.classList.contains('found')) return;
+        const info = levels[currentDiff].data[flag.dataset.id];
+        const modal = document.getElementById('game-modal');
+        const optsContainer = document.getElementById('options');
+        
+        document.getElementById('q-text').innerText = info.q;
+        optsContainer.innerHTML = '';
+        
+        const shuffledOptions = shuffleArray([...info.options]);
+        shuffledOptions.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'choice-btn';
+            b.innerText = o;
+            b.onclick = () => {
+                if (o === info.correct) {
+                    flag.classList.add('found');
+                    foundCount++;
+                    score += 1000;
+                    updateUI();
+                    modal.style.display = 'none';
+                    if (foundCount === 10) endGame("CONTRACT VOIDED!");
+                } else {
+                    timeLeft -= 10;
+                    alert("Wrong! -10 Seconds Penalty.");
+                    modal.style.display = 'none';
+                }
+            };
+            optsContainer.appendChild(b);
+        });
+        modal.style.display = 'flex';
+    }
+
+    function updateUI() {
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('progress-fill').style.width = (foundCount / 10 * 100) + "%";
+    }
+
+    function endGame(msg) {
+        clearInterval(timer);
+        alert(msg + "\nScore: " + score);
+        document.getElementById('start-overlay').style.display = 'flex';
+        document.getElementById('game-view').style.display = 'none';
+    }
+</script>
+</body>
+</html>
