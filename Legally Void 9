@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legally Void: Multiversal Edition</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --bg: #0f172a;
+            --paper: #ffffff;
+            --ink: #0f172a;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            background-color: var(--bg);
+            color: #f8fafc;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Header & Selector */
+        .game-header {
+            width: 100%;
+            max-width: 650px;
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            position: sticky;
+            top: 5px;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
+        select#diff-selector {
+            background: #0f172a;
+            color: white;
+            border: 1px solid var(--primary);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: sans-serif;
+        }
+
+        .stats { display: flex; gap: 20px; }
+        .stat-val { font-family: sans-serif; font-weight: bold; color: var(--primary); }
+
+        .progress-bg { background: #334155; height: 8px; border-radius: 4px; overflow: hidden; }
+        #progress-fill { background: var(--success); width: 0%; height: 100%; transition: 0.4s; }
+
+        /* The Document */
+        .contract-container {
+            background: var(--paper);
+            color: var(--ink);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            line-height: 1.7;
+            min-height: 600px;
+        }
+
+        .red-flag {
+            background: #f1f5f9;
+            border-bottom: 2px dashed var(--danger);
+            cursor: pointer;
+        }
+
+        .found {
+            background: #dcfce7 !important;
+            color: #166534;
+            text-decoration: line-through;
+            border-bottom: none !important;
+        }
+
+        /* Modals */
+        #game-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-body {
+            background: white;
+            color: var(--ink);
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #f8fafc;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        #start-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .btn-start {
+            background: var(--primary);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="start-overlay">
+    <h1>LEGALLY VOID</h1>
+    <p>Choose your expertise level to begin the audit.</p>
+    <select id="initial-diff" style="padding: 10px; font-size: 1rem; border-radius: 5px;">
+        <option value="easy">Easy (10 Year Old)</option>
+        <option value="medium">Medium (Canada Law 12)</option>
+        <option value="hard">Hard (Corporate Partner)</option>
+    </select>
+    <button class="btn-start" onclick="firstStart()">START CAREER</button>
+</div>
+
+<div id="game-view" style="display:none">
+    <div class="game-header">
+        <div class="top-row">
+            <select id="diff-selector" onchange="resetGame(this.value)">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+            <div class="stats">
+                <div>Score: <span id="score-val" class="stat-val">0</span></div>
+                <div>Time: <span id="timer-val" class="stat-val">120</span>s</div>
+            </div>
+        </div>
+        <div class="progress-bg"><div id="progress-fill"></div></div>
+    </div>
+
+    <div class="contract-container" id="contract-content">
+        <!-- Content injected by JS -->
+    </div>
+</div>
+
+<div id="game-modal">
+    <div class="modal-body">
+        <h4 id="q-text" style="margin-top:0">Identify the defect:</h4>
+        <div id="options"></div>
+    </div>
+</div>
+
+<script>
+    let score = 0;
+    let timeLeft = 120;
+    let foundCount = 0;
+    let timer;
+    let currentDiff = 'easy';
+
+    const levels = {
+        easy: {
+            title: "SIMPLE TRADING RULES",
+            text: `I, a <span class="red-flag" data-id="1">5-year-old child</span>, agree to trade my lunch. 
+            I will give you <span class="red-flag" data-id="2">stolen candy</span> from the store. 
+            You must give me <span class="red-flag" data-id="3">nothing in return</span>. 
+            I am only signing because you <span class="red-flag" data-id="4">pinched my arm</span>. 
+            You told me this was a <span class="red-flag" data-id="5">coloring book page</span>. 
+            I am currently <span class="red-flag" data-id="6">fast asleep</span> and don't know I'm signing. 
+            We both think this candy is <span class="red-flag" data-id="7">made of solid gold</span>. 
+            You promised the candy <span class="red-flag" data-id="8">grants super powers</span>. 
+            I am trading my <span class="red-flag" data-id="9">whole house for a marble</span>. 
+            Lastly, the paper says I <span class="red-flag" data-id="10">can never tell my mom</span> or I go to jail.`,
+            data: {
+                "1": { q: "A 5-year-old is too...", options: ["Young to sign", "Small to sign", "Funny to sign", "Fast to sign"], correct: "Young to sign" },
+                "2": { q: "Trading stolen items is...", options: ["Against the law", "Super cool", "Allowed on Fridays", "A good deal"], correct: "Against the law" },
+                "3": { q: "A contract needs both people to...", options: ["Give something", "Be tall", "Wear shoes", "Like pizza"], correct: "Give something" },
+                "4": { q: "Pinched arm means they were...", options: ["Forced to sign", "Tickled", "Happy", "Excited"], correct: "Forced to sign" },
+                "5": { q: "Lying about what the paper is is...", options: ["Tricking them", "A surprise", "Fine", "Funny"], correct: "Tricking them" },
+                "6": { q: "A sleeping person lacks...", options: ["Understanding", "Pajamas", "A pen", "A pillow"], correct: "Understanding" },
+                "7": { q: "Both being wrong about the gold is a...", options: ["Mistake", "Winning bet", "Secret", "Magic trick"], correct: "Mistake" },
+                "8": { q: "Lying about super powers is...", options: ["A big lie", "A joke", "True", "Allowed"], correct: "A big lie" },
+                "9": { q: "A house for a marble is...", options: ["Not fair at all", "A great trade", "Legal", "Normal"], correct: "Not fair at all" },
+                "10": { q: "You can't make rules that...", options: ["Break real laws", "Mention moms", "Use paper", "Are written"], correct: "Break real laws" }
+            }
+        },
+        medium: {
+            title: "CANADIAN CIVIL AGREEMENT",
+            text: `This contract involves a <span class="red-flag" data-id="1">minor under 18</span>. 
+            The purpose is the <span class="red-flag" data-id="2">sale of illicit substances</span>. 
+            The seller <span class="red-flag" data-id="3">concealed a structural crack</span> in the foundation. 
+            The buyer is <span class="red-flag" data-id="4">suffering from dementia</span>. 
+            Signer was under <span class="red-flag" data-id="5">threat of criminal report</span>. 
+            The son used <span class="red-flag" data-id="6">his power over his sick mother</span>. 
+            The buyer thought they signed a <span class="red-flag" data-id="7">lease, not a sale</span>. 
+            The price is <span class="red-flag" data-id="8">shockingly unfair</span> to the uneducated seller. 
+            Both parties <span class="red-flag" data-id="9">believe the car exists</span>, but it was totaled. 
+            Clause 10 <span class="red-flag" data-id="10">limits all liability for gross harm</span>.`,
+            data: {
+                "1": { q: "In Canada, a minor lacks...", options: ["Capacity to Contract", "Parental Consent", "Legislative Standing", "Financial Interest"], correct: "Capacity to Contract" },
+                "2": { q: "Illicit substance sales are...", options: ["Void for Illegality", "Voidable by Seller", "Valid if taxed", "Enforceable in BC only"], correct: "Void for Illegality" },
+                "3": { q: "Concealing a structural defect is...", options: ["Fraudulent Misrepresentation", "Caveat Emptor", "Innocent Error", "Specific Performance"], correct: "Fraudulent Misrepresentation" },
+                "4": { q: "Dementia affects the party's...", options: ["Mental Capacity", "Economic Interest", "Legal Identity", "Right to Counsel"], correct: "Mental Capacity" },
+                "5": { q: "Threatening a criminal report to get a signature is...", options: ["Duress", "Standard Negotiation", "Injunction", "Tortious Act"], correct: "Duress" },
+                "6": { q: "Taking advantage of a parent is...", options: ["Undue Influence", "Family Law", "Probate Issue", "Negligence"], correct: "Undue Influence" },
+                "7": { q: "Mistakenly signing a sale instead of a lease is...", options: ["Non Est Factum", "Error in Law", "Statute of Frauds", "Privity"], correct: "Non Est Factum" },
+                "8": { q: "An extremely one-sided deal for an uneducated person is...", options: ["Unconscionability", "Bad Bargain", "Market Value Error", "Valid Consideration"], correct: "Unconscionability" },
+                "9": { q: "Both being wrong about the car's existence is...", options: ["Mutual Mistake", "Unilateral Mistake", "Frustration", "Damages"], correct: "Mutual Mistake" },
+                "10": { q: "Waiving liability for gross negligence is...", options: ["Against Public Policy", "Standard Practice", "Exclusion Clause", "Limited Warranty"], correct: "Against Public Policy" }
+            }
+        },
+        hard: {
+            title: "SHARE PURCHASE AGREEMENT",
+            text: `Agreement between Alpha and the <span class="red-flag" data-id="1">liquidator of a dissolved corp</span>. 
+            The CEO is <span class="red-flag" data-id="2">under court-ordered wardship</span>. 
+            The <span class="red-flag" data-id="3">underlying asset was expropriated</span> without knowledge. 
+            Buyer <span class="red-flag" data-id="4">omitted a material tax lien</span>. 
+            Payment is via <span class="red-flag" data-id="5">prohibited offshore tokens</span>. 
+            Contract requires <span class="red-flag" data-id="6">horizontal price fixing</span>. 
+            Seller was <span class="red-flag" data-id="7">detained without food</span> until signing. 
+            Seller is the Buyer's father, who <span class="red-flag" data-id="8">relies on Buyer for care</span>. 
+            Seller thinks this is a <span class="red-flag" data-id="9">non-binding term sheet</span>. 
+            Clause 10 <span class="red-flag" data-id="10">strips all statutory trial rights</span>.`,
+            data: {
+                "1": { q: "The liquidator lacks...", options: ["Locus Standi", "Fiduciary Duty", "Executive Power", "Privity"], correct: "Locus Standi" },
+                "2": { q: "The wardship implies...", options: ["Legal Incapacity", "Conflict of Interest", "Ultra Vires", "Pierced Veil"], correct: "Legal Incapacity" },
+                "3": { q: "Missing assets create a...", options: ["Mutual Mistake of Fact", "Frustration of Purpose", "Breach of Warranty", "Force Majeure"], correct: "Mutual Mistake of Fact" },
+                "4": { q: "Omitting the lien is...", options: ["Fraudulent Concealment", "Puffery", "Negligent Misstatement", "Rescission"], correct: "Fraudulent Concealment" },
+                "5": { q: "Prohibited tokens cause...", options: ["Illegality of Consideration", "Nominal Consideration", "Past Consideration", "Lack of Deed"], correct: "Illegality of Consideration" },
+                "6": { q: "Price fixing is an...", options: ["Antitrust Violation", "Inducement", "Tort", "Civil Contempt"], correct: "Antitrust Violation" },
+                "7": { q: "Detention/starvation is...", options: ["Physical Duress", "Economic Duress", "Hard Bargaining", "Coercion"], correct: "Physical Duress" },
+                "8": { q: "The caregiving relationship suggests...", options: ["Undue Influence", "Unconscionability", "Gratuitous Promise", "Estoppel"], correct: "Undue Influence" },
+                "9": { q: "Deed vs Term Sheet error is...", options: ["Non Est Factum", "Mistake of Law", "Rectification", "Specific Performance"], correct: "Non Est Factum" },
+                "10": { q: "Stripping trial rights is...", options: ["Void for Public Policy", "Unconscionability", "Arbitration Clause", "Severability"], correct: "Void for Public Policy" }
+            }
+        }
+    };
+
+    function firstStart() {
+        const d = document.getElementById('initial-diff').value;
+        document.getElementById('start-overlay').style.display = 'none';
+        document.getElementById('game-view').style.display = 'block';
+        document.getElementById('diff-selector').value = d;
+        resetGame(d);
+    }
+
+    function resetGame(diff) {
+        currentDiff = diff;
+        score = 0;
+        timeLeft = (diff === 'easy') ? 180 : (diff === 'medium' ? 120 : 90);
+        foundCount = 0;
+        clearInterval(timer);
+        
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('timer-val').innerText = timeLeft;
+        document.getElementById('progress-fill').style.width = "0%";
+        
+        const content = levels[diff];
+        const container = document.getElementById('contract-content');
+        container.innerHTML = `<h2>${content.title}</h2><p>${content.text}</p>`;
+        
+        // Re-attach listeners
+        document.querySelectorAll('.red-flag').forEach(flag => {
+            flag.onclick = () => handleFlagClick(flag);
+        });
+
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-val').innerText = timeLeft;
+            if (timeLeft <= 0) endGame("TIME EXPIRED");
+        }, 1000);
+    }
+
+    function handleFlagClick(flag) {
+        if (flag.classList.contains('found')) return;
+        const id = flag.dataset.id;
+        const info = levels[currentDiff].data[id];
+        
+        const modal = document.getElementById('game-modal');
+        const opts = document.getElementById('options');
+        document.getElementById('q-text').innerText = info.q;
+        opts.innerHTML = '';
+        
+        info.options.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'choice-btn';
+            b.innerText = o;
+            b.onclick = () => {
+                if (o === info.correct) {
+                    flag.classList.add('found');
+                    foundCount++;
+                    score += 1000;
+                    updateUI();
+                    modal.style.display = 'none';
+                    if (foundCount === 10) endGame("AUDIT SUCCESSFUL");
+                } else {
+                    timeLeft -= 10;
+                    alert("Incorrect! Penalty applied.");
+                    modal.style.display = 'none';
+                }
+            };
+            opts.appendChild(b);
+        });
+        modal.style.display = 'flex';
+    }
+
+    function updateUI() {
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('progress-fill').style.width = (foundCount / 10 * 100) + "%";
+    }
+
+    function endGame(msg) {
+        clearInterval(timer);
+        alert(`${msg}\nFinal Score: ${score}`);
+        document.getElementById('start-overlay').style.display = 'flex';
+        document.getElementById('game-view').style.display = 'none';
+    }
+</script>
+</body>
+</html>
