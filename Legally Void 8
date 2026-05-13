@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legally Void: Corporate Edition</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --bg: #1e293b;
+            --paper: #ffffff;
+            --ink: #0f172a;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            background-color: var(--bg);
+            color: #f8fafc;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Stats & Progress */
+        .game-header {
+            width: 100%;
+            max-width: 650px;
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            position: sticky;
+            top: 5px;
+            z-index: 100;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .stats { display: flex; justify-content: space-around; margin-bottom: 10px; }
+        .stat-label { font-family: sans-serif; font-size: 0.8rem; color: #94a3b8; }
+        .stat-val { font-family: sans-serif; font-weight: bold; color: var(--primary); font-size: 1.2rem; }
+
+        .progress-bg { background: #334155; height: 6px; border-radius: 3px; overflow: hidden; }
+        #progress-fill { background: var(--success); width: 0%; height: 100%; transition: 0.4s; }
+
+        /* The Document */
+        .contract-container {
+            background: var(--paper);
+            color: var(--ink);
+            padding: 50px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            line-height: 1.6;
+            font-size: 1rem;
+        }
+
+        h2 { text-align: center; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 10px; }
+
+        .red-flag {
+            background: #f1f5f9;
+            border-bottom: 1px dotted var(--danger);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .red-flag:hover { background: #fee2e2; }
+
+        .found {
+            background: #dcfce7 !important;
+            color: #166534;
+            text-decoration: line-through;
+            border-bottom: none !important;
+        }
+
+        /* Modals */
+        #game-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-body {
+            background: white;
+            color: var(--ink);
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #f8fafc;
+            text-align: left;
+            cursor: pointer;
+            font-family: sans-serif;
+        }
+
+        .choice-btn:hover { background: #e2e8f0; border-color: var(--primary); }
+
+        #end-screen {
+            display: none;
+            text-align: center;
+            padding: 50px;
+        }
+
+        .btn-action {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-view">
+    <div class="game-header">
+        <div class="stats">
+            <div><span class="stat-label">SCORE</span><br><span id="score-val" class="stat-val">0</span></div>
+            <div><span class="stat-label">AUDIT TIME</span><br><span id="timer-val" class="stat-val">120</span>s</div>
+        </div>
+        <div class="progress-bg"><div id="progress-fill"></div></div>
+    </div>
+
+    <div class="contract-container">
+        <h2>Share Purchase Agreement</h2>
+        <p><b>1. PARTIES:</b> This agreement is made between Alpha Corp and <span class="red-flag" data-id="1">the liquidator of a dissolved entity</span> who lacks standing. Alpha Corp's CEO is currently <span class="red-flag" data-id="2">subject to a Court-ordered guardianship</span> due to mental incapacity.</p>
+
+        <p><b>2. RECITALS:</b> Both parties enter this deal based on the mutual belief that the <span class="red-flag" data-id="3">underlying oil well is active</span>, though it was capped and emptied last year without their knowledge. The Buyer was induced by <span class="red-flag" data-id="4">omitting the $2M tax lien</span> from the disclosure schedules.</p>
+
+        <p><b>3. CONSIDERATION:</b> The purchase price shall be paid via <span class="red-flag" data-id="5">unregistered offshore crypto-tokens</span> explicitly prohibited by federal securities law. Alpha Corp also agrees to <span class="red-flag" data-id="6">fix prices with Beta Group</span> as a condition of the closing.</p>
+
+        <p><b>4. EXECUTION:</b> The Seller’s signature was obtained after being <span class="red-flag" data-id="7">detained in a boardroom for 12 hours</span> without food and threatened with civil litigation. Furthermore, the Seller is the Buyer’s own 85-year-old father, who <span class="red-flag" data-id="8">relies entirely on the Buyer</span> for medical and financial care.</p>
+
+        <p><b>5. MISCELLANEOUS:</b> The Seller believes they are signing a <span class="red-flag" data-id="9">non-binding letter of intent</span> despite the document being a definitive sale. Lastly, the contract includes a clause to <span class="red-flag" data-id="10">waive all rights to a fair trial</span> in a manner that violates local public policy.</p>
+    </div>
+</div>
+
+<div id="end-screen">
+    <h1 id="end-title">AUDIT COMPLETE</h1>
+    <p id="end-subtitle"></p>
+    <button class="btn-action" onclick="resetGame()">RE-AUDIT CONTRACT</button>
+</div>
+
+<div id="game-modal">
+    <div class="modal-body">
+        <h4 id="q-text" style="font-family: sans-serif; margin-top: 0;">Identify the Legal Defect:</h4>
+        <div id="options"></div>
+    </div>
+</div>
+
+<script>
+    let score = 0;
+    let timeLeft = 120;
+    let foundCount = 0;
+    const total = 10;
+    let timer;
+
+    const database = {
+        "1": { q: "The liquidator of a dissolved entity lacks...", options: ["Contractual Capacity", "Locus Standi (Standing)", "Privity of Contract", "Executive Immunity"], correct: "Locus Standi (Standing)" },
+        "2": { q: "The CEO's court-ordered guardianship creates...", options: ["A Conflict of Interest", "Legal Incapacity", "Corporate Veil Piercing", "Constructive Fraud"], correct: "Legal Incapacity" },
+        "3": { q: "Both parties were wrong about the oil well's existence...", options: ["Mutual Mistake of Fact", "Unilateral Mistake", "Frustration of Purpose", "Caveat Emptor"], correct: "Mutual Mistake of Fact" },
+        "4": { q: "Omitting the $2M tax lien from disclosure is...", options: ["Puffery", "Negligent Misrepresentation", "Fraudulent Concealment", "Innocent Misrepresentation"], correct: "Fraudulent Concealment" },
+        "5": { q: "The use of prohibited tokens constitutes...", options: ["Illegality of Consideration", "Lack of Valuable Consideration", "Past Consideration", "Nominal Consideration"], correct: "Illegality of Consideration" },
+        "6": { q: "A clause to fix prices with a third party is...", options: ["Restraint of Trade", "Antitrust Illegality", "Tortious Interference", "Breach of Fiduciary Duty"], correct: "Antitrust Illegality" },
+        "7": { q: "Detention and threats to force a signature is...", options: ["Undue Influence", "Economic Duress", "Physical Duress", "Unconscionable Conduct"], correct: "Physical Duress" },
+        "8": { q: "The relationship between the father and son suggests...", options: ["Undue Influence", "Unconscionability", "Estoppel", "Vicarious Liability"], correct: "Undue Influence" },
+        "9": { q: "Thinking a deed is a 'letter of intent' is...", options: ["Non Est Factum", "Mistake of Law", "Anticipatory Repudiation", "Parol Evidence Rule"], correct: "Non Est Factum" },
+        "10": { q: "Waiving trial rights against public policy is...", options: ["Void for Public Policy", "Unconscionability", "Severability Issue", "Force Majeure"], correct: "Void for Public Policy" }
+    };
+
+    function startGame() {
+        score = 0;
+        timeLeft = 120;
+        foundCount = 0;
+        updateUI();
+        document.getElementById('game-view').style.display = 'block';
+        document.getElementById('end-screen').style.display = 'none';
+        document.querySelectorAll('.red-flag').forEach(f => f.classList.remove('found'));
+        
+        clearInterval(timer);
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-val').innerText = timeLeft;
+            if (timeLeft <= 0) endGame("AUDIT FAILED");
+        }, 1000);
+    }
+
+    document.querySelectorAll('.red-flag').forEach(flag => {
+        flag.onclick = () => {
+            if (flag.classList.contains('found')) return;
+            const id = flag.dataset.id;
+            const info = database[id];
+            
+            const modal = document.getElementById('game-modal');
+            const opts = document.getElementById('options');
+            opts.innerHTML = '';
+            
+            info.options.forEach(o => {
+                const b = document.createElement('button');
+                b.className = 'choice-btn';
+                b.innerText = o;
+                b.onclick = () => {
+                    if (o === info.correct) {
+                        flag.classList.add('found');
+                        foundCount++;
+                        score += 1000 + (timeLeft * 5);
+                        updateUI();
+                        modal.style.display = 'none';
+                        if (foundCount === total) endGame("PARTNER PROMOTED");
+                    } else {
+                        timeLeft -= 10;
+                        alert("Legal Error! -10 Seconds.");
+                        modal.style.display = 'none';
+                    }
+                };
+                opts.appendChild(b);
+            });
+            modal.style.display = 'flex';
+        };
+    });
+
+    function updateUI() {
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('progress-fill').style.width = (foundCount / total * 100) + "%";
+    }
+
+    function endGame(msg) {
+        clearInterval(timer);
+        document.getElementById('game-view').style.display = 'none';
+        document.getElementById('end-screen').style.display = 'block';
+        document.getElementById('end-title').innerText = msg;
+        document.getElementById('end-subtitle').innerText = `Total Score: ${score} | Defects Found: ${foundCount}/${total}`;
+    }
+
+    function resetGame() {
+        startGame();
+    }
+
+    startGame();
+</script>
+</body>
+</html>
