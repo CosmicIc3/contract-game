@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legally Void: Highlight Audit</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --bg: #0f172a;
+            --paper: #ffffff;
+            --ink: #1e293b;
+            /* Semi-opaque highlight colors */
+            --hl-pending: rgba(254, 240, 138, 0.4); /* Opaque yellow */
+            --hl-hover: rgba(253, 224, 71, 0.7);    /* Darker on hover */
+            --hl-found: rgba(34, 197, 94, 0.3);     /* Opaque green success */
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            background-color: var(--bg);
+            color: #f8fafc;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* UI Elements */
+        .game-header {
+            width: 100%;
+            max-width: 700px;
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            position: sticky;
+            top: 5px;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
+        select#diff-selector {
+            background: #0f172a;
+            color: white;
+            border: 1px solid var(--primary);
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .stat-val { font-family: sans-serif; font-weight: bold; color: var(--primary); }
+        .progress-bg { background: #334155; height: 8px; border-radius: 4px; overflow: hidden; }
+        #progress-fill { background: var(--success); width: 0%; height: 100%; transition: 0.4s; }
+
+        /* The Document */
+        .contract-container {
+            background: var(--paper);
+            color: var(--ink);
+            padding: 60px 50px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            line-height: 1.8;
+            font-size: 1.05rem;
+            text-align: justify;
+        }
+
+        h2 { text-align: center; text-transform: uppercase; border-bottom: 2px solid #334155; padding-bottom: 10px; }
+        .section-title { font-weight: bold; display: block; margin-top: 25px; text-transform: uppercase; font-size: 0.85rem; color: #64748b; }
+
+        /* Semi-Opaque Highlighting */
+        .red-flag {
+            background-color: var(--hl-pending);
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 2px 0;
+            border-radius: 2px;
+        }
+
+        .red-flag:hover {
+            background-color: var(--hl-hover);
+        }
+
+        .found {
+            background-color: var(--hl-found) !important;
+            color: var(--success) !important;
+            text-decoration: line-through !important;
+            cursor: default;
+        }
+
+        /* Modal & Start Overlay omitted for brevity in code logic, but fully functional below */
+        #game-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-body {
+            background: white;
+            color: #0f172a;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 420px;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            text-align: left;
+            cursor: pointer;
+            font-family: sans-serif;
+        }
+
+        #start-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<div id="start-overlay">
+    <h1>LEGAL AUDITOR PRO</h1>
+    <p style="color: #94a3b8;">Review the highlights to find the 10 invalidating factors.</p>
+    <select id="initial-diff" style="padding: 12px; width: 250px; border-radius: 8px;">
+        <option value="easy">Easy (Elementary)</option>
+        <option value="medium">Medium (Canada Law 12)</option>
+        <option value="hard">Hard (Corporate Law)</option>
+    </select>
+    <button onclick="firstStart()" style="margin-top:25px; padding: 15px 50px; border-radius:30px; border:none; background:var(--primary); color:white; font-weight:bold; cursor:pointer;">START AUDIT</button>
+</div>
+
+<div id="game-view" style="display:none">
+    <div class="game-header">
+        <div class="top-row">
+            <select id="diff-selector" onchange="resetGame(this.value)">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+            <div class="stats">
+                <div style="color:white">Score: <span id="score-val" class="stat-val">0</span></div>
+                <div style="color:white">Time: <span id="timer-val" class="stat-val">120</span>s</div>
+            </div>
+        </div>
+        <div class="progress-bg"><div id="progress-fill"></div></div>
+    </div>
+
+    <div class="contract-container" id="contract-content">
+        <!-- Content will be injected here -->
+    </div>
+</div>
+
+<div id="game-modal">
+    <div class="modal-body">
+        <h4 id="q-text" style="margin-top:0; font-family:sans-serif; color: #64748b; font-size: 0.8rem; text-transform: uppercase;">Defect Analysis:</h4>
+        <div id="options"></div>
+    </div>
+</div>
+
+<script>
+    // Levels data with realistic boilerplate
+    const levels = {
+        easy: {
+            title: "Standard Service Agreement",
+            text: `<h2>AGREEMENT OF SERVICES</h2>
+            <p>This document constitutes a binding agreement between the Service Provider and the Client, who is currently <span class="red-flag" data-id="1">a preschooler aged 4</span>. The Provider shall perform duties including but not limited to lawn care and general cleanup.</p>
+            <span class="section-title">Article 1: Payment</span>
+            <p>In consideration for the services provided, the Client agrees to provide <span class="red-flag" data-id="2">stolen diamonds</span>. The parties agree that no other payment is required for additional hours, resulting in <span class="red-flag" data-id="3">zero total compensation</span> for the weekend staff.</p>
+            <span class="section-title">Article 2: Quality Control</span>
+            <p>The Provider warrants that all tools are powered by <span class="red-flag" data-id="4">infinite moonbeams</span>. Both parties enter this deal mistakenly believing that <span class="red-flag" data-id="5">trees are made of plastic</span>. The Client only signed because the Provider is <span class="red-flag" data-id="6">threatening to delete the Client's video games</span>.</p>
+            <span class="section-title">Article 3: Execution</span>
+            <p>The Client was told this document is <span class="red-flag" data-id="7">a map to a pirate treasure</span>. Additionally, the Client is <span class="red-flag" data-id="8">under a heavy sedative</span> and cannot understand the text. The Provider promises the work <span class="red-flag" data-id="9">will grant the Client super-speed</span>. Finally, the Client <span class="red-flag" data-id="10">is forbidden from ever leaving their house</span> by the terms of this contract.</p>`,
+            data: {
+                "1": { q: "Why is the 4-year-old an issue?", options: ["Lack of capacity", "No work permit", "Short attention span", "Uncertified"], correct: "Lack of capacity" },
+                "2": { q: "Stolen diamonds are...", options: ["Illegal consideration", "A bonus", "Taxable income", "Valid if polished"], correct: "Illegal consideration" },
+                "3": { q: "Working for zero dollars lacks...", options: ["Consideration", "Profit", "Goodwill", "Efficiency"], correct: "Consideration" },
+                "4": { q: "The 'moonbeam' claim is...", options: ["Fraudulent misrepresentation", "Trade secret", "Puffery", "Optimism"], correct: "Fraudulent misrepresentation" },
+                "5": { q: "Believing trees are plastic is a...", options: ["Mutual mistake", "Biological fact", "Marketing tool", "Unilateral error"], correct: "Mutual mistake" },
+                "6": { q: "The video game threat is...", options: ["Duress", "Negotiation", "Civil tort", "A joke"], correct: "Duress" },
+                "7": { q: "The 'pirate map' lie is...", options: ["Non est factum", "Creative writing", "A gift", "Minor error"], correct: "Non est factum" },
+                "8": { q: "Being sedated means...", options: ["No mental capacity", "Efficient workflow", "Implied consent", "Meditation"], correct: "No mental capacity" },
+                "9": { q: "The 'super-speed' promise is...", options: ["Fraud", "A goal", "Motivation", "Reasonable"], correct: "Fraud" },
+                "10": { q: "The 'cannot leave house' rule is...", options: ["Against public policy", "Security", "Privacy", "Trade secret"], correct: "Against public policy" }
+            }
+        },
+        medium: {
+            title: "Standard Residential Lease",
+            text: `<h2>RESIDENTIAL LEASE</h2>
+            <p>This lease is entered into by the Landlord and the Tenant, who is a <span class="red-flag" data-id="1">14-year-old child</span>. The premises are to be used strictly for residential purposes. However, the Tenant intends to use the garage for <span class="red-flag" data-id="2">smuggling prohibited wildlife</span>.</p>
+            <span class="section-title">Section 1: Disclosure</span>
+            <p>The Landlord <span class="red-flag" data-id="3">failed to mention the structural collapse</span> in the basement. The Landlord is currently <span class="red-flag" data-id="4">under a court-ordered psychiatric hold</span>. The Tenant signed after the Landlord <span class="red-flag" data-id="5">threatened to burn the Tenant's car</span>.</p>
+            <span class="section-title">Section 2: Validity</span>
+            <p>A relative used <span class="red-flag" data-id="6">intense psychological manipulation</span> to force the signature. The Tenant believed they signed <span class="red-flag" data-id="7">a pizza delivery receipt</span>. The rent is $0.05 per year because the Tenant <span class="red-flag" data-id="8">exploited the Landlord's inability to see</span>. Both <span class="red-flag" data-id="9">believe the house has a gold roof</span>. Finally, the lease <span class="red-flag" data-id="10">permits the Landlord to assault the Tenant</span> for late rent.</p>`,
+            data: {
+                "1": { q: "14-year-old status?", options: ["Lack of capacity", "Minority interest", "Legislative void", "Standing"], correct: "Lack of capacity" },
+                "2": { q: "Wildlife smuggling is...", options: ["Void for illegality", "Business use", "Zoning error", "Taxable"], correct: "Void for illegality" },
+                "3": { q: "Hiding structural collapse is...", options: ["Fraudulent misrepresentation", "Caveat emptor", "Patent defect", "Duty of care"], correct: "Fraudulent misrepresentation" },
+                "4": { q: "Psychiatric hold means...", options: ["Lack of mental capacity", "Professional error", "No license", "Poor management"], correct: "Lack of mental capacity" },
+                "5": { q: "Threatening to burn a car is...", options: ["Duress", "Standard bargaining", "Civil tort", "Warning"], correct: "Duress" },
+                "6": { q: "Psychological manipulation is...", options: ["Undue influence", "Family dynamics", "Moral obligation", "Social pressure"], correct: "Undue influence" },
+                "7": { q: "The 'pizza receipt' lie is...", options: ["Non est factum", "Mistake of law", "Clerical error", "Fraud"], correct: "Non est factum" },
+                "8": { q: "Preying on the blind is...", options: ["Unconscionability", "Smart business", "Gift logic", "Consideration error"], correct: "Unconscionability" },
+                "9": { q: "The gold roof belief is a...", options: ["Mutual mistake", "Unilateral error", "Puffery", "Variance"], correct: "Mutual mistake" },
+                "10": { q: "Permitting assault is...", options: ["Contrary to public policy", "Exclusion clause", "Warranty", "Indemnity"], correct: "Contrary to public policy" }
+            }
+        },
+        hard: {
+            title: "Corporate Purchase Agreement",
+            text: `<h2>ASSET PURCHASE DEED</h2>
+            <p>This agreement involves the <span class="red-flag" data-id="1">Agent of a dissolved company</span>. The Vendor's Board Director is currently <span class="red-flag" data-id="2">legally declared insane</span>. The parties agree to the <span class="red-flag" data-id="3">sale of land that was already destroyed by a volcano</span>.</p>
+            <span class="section-title">Clause 4: Disclosure</span>
+            <p>The Vendor <span class="red-flag" data-id="4">deliberately falsified the tax records</span> shown during audit. Payment shall be made via <span class="red-flag" data-id="5">counterfeit lottery tickets</span>. The Purchaser agrees to <span class="red-flag" data-id="6">conspire to rig the local market prices</span>.</p>
+            <span class="section-title">Clause 5: Assent</span>
+            <p>The Director was <span class="red-flag" data-id="7">held at gunpoint</span> during the board meeting. The parent company <span class="red-flag" data-id="8">used overwhelming financial pressure</span> to seize the assets. The Director thought this was <span class="red-flag" data-id="9">a simple holiday card</span>. Finally, the contract <span class="red-flag" data-id="10">waives all human rights of the employees</span>.</p>`,
+            data: {
+                "1": { q: "A dissolved company has...", options: ["No locus standi", "No tax ID", "Limited liability", "Ultra vires"], correct: "No locus standi" },
+                "2": { q: "Legal insanity creates...", options: ["Legal incapacity", "Conflict of interest", "Agency breach", "Power of attorney"], correct: "Legal incapacity" },
+                "3": { q: "Selling land destroyed by volcano is a...", options: ["Mutual mistake of fact", "Frustration", "Technicality", "Warranty"], correct: "Mutual mistake of fact" },
+                "4": { q: "Falsifying records is...", options: ["Fraudulent concealment", "Due diligence", "Data management", "Standard practice"], correct: "Fraudulent concealment" },
+                "5": { q: "Counterfeit tickets result in...", options: ["Illegality of consideration", "Nominal value", "Debt financing", "Past consideration"], correct: "Illegality of consideration" },
+                "6": { q: "Market price rigging is an...", options: ["Antitrust violation", "Economic synergy", "Vertical merger", "Market strategy"], correct: "Antitrust violation" },
+                "7": { q: "Gunpoint signature is...", options: ["Physical duress", "Intense negotiation", "Boardroom tactics", "False imprisonment"], correct: "Physical duress" },
+                "8": { q: "Overwhelming pressure is...", options: ["Undue influence", "Smart lending", "Leverage", "Security interest"], correct: "Undue influence" },
+                "9": { q: "Holiday card vs SPA is...", options: ["Non est factum", "Mistake of law", "Clerical error", "Rectification"], correct: "Non est factum" },
+                "10": { q: "Waiving human rights is...", options: ["Void for public policy", "Strategic operation", "Foreign exemption", "Severable clause"], correct: "Void for public policy" }
+            }
+        }
+    };
+
+    let score = 0, timeLeft = 120, foundCount = 0, timer, currentDiff = 'easy';
+
+    function firstStart() {
+        const d = document.getElementById('initial-diff').value;
+        document.getElementById('start-overlay').style.display = 'none';
+        document.getElementById('game-view').style.display = 'block';
+        document.getElementById('diff-selector').value = d;
+        resetGame(d);
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function resetGame(diff) {
+        currentDiff = diff;
+        score = 0; foundCount = 0;
+        timeLeft = (diff === 'easy') ? 180 : (diff === 'medium' ? 120 : 100);
+        clearInterval(timer);
+        
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('timer-val').innerText = timeLeft;
+        document.getElementById('progress-fill').style.width = "0%";
+        
+        const content = levels[diff];
+        document.getElementById('contract-content').innerHTML = content.text;
+        
+        document.querySelectorAll('.red-flag').forEach(flag => {
+            flag.onclick = () => handleFlagClick(flag);
+        });
+
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-val').innerText = timeLeft;
+            if (timeLeft <= 0) endGame("AUDIT FAILED");
+        }, 1000);
+    }
+
+    function handleFlagClick(flag) {
+        if (flag.classList.contains('found')) return;
+        const info = levels[currentDiff].data[flag.dataset.id];
+        const modal = document.getElementById('game-modal');
+        const optsContainer = document.getElementById('options');
+        
+        document.getElementById('q-text').innerText = "Analyzing: " + flag.innerText;
+        optsContainer.innerHTML = '';
+        
+        const shuffledOptions = shuffleArray([...info.options]);
+        shuffledOptions.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'choice-btn';
+            b.innerText = o;
+            b.onclick = () => {
+                if (o === info.correct) {
+                    flag.classList.add('found');
+                    foundCount++;
+                    score += 1000 + (timeLeft * 2);
+                    updateUI();
+                    modal.style.display = 'none';
+                    if (foundCount === 10) endGame("AUDIT SUCCESSFUL");
+                } else {
+                    timeLeft -= 15;
+                    alert("LEGAL ERROR: -15 seconds penalty.");
+                    modal.style.display = 'none';
+                }
+            };
+            optsContainer.appendChild(b);
+        });
+        modal.style.display = 'flex';
+    }
+
+    function updateUI() {
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('progress-fill').style.width = (foundCount / 10 * 100) + "%";
+    }
+
+    function endGame(msg) {
+        clearInterval(timer);
+        alert(msg + "\nPoints: " + score);
+        document.getElementById('start-overlay').style.display = 'flex';
+        document.getElementById('game-view').style.display = 'none';
+    }
+</script>
+</body>
+</html>
