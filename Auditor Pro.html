@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legally Void: Auditor Pro</title>
+    <style>
+        :root {
+            --primary: #2563eb; --danger: #dc2626; --success: #16a34a;
+            --bg: #0f172a; --paper: #ffffff; --ink: #1e293b;
+            --hl-pending: rgba(254, 240, 138, 0.4);
+            --hl-found: rgba(34, 197, 94, 0.3);
+        }
+        body { font-family: 'Times New Roman', Times, serif; background-color: var(--bg); color: #f8fafc; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        
+        .nav-btn { background: #334155; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-family: sans-serif; transition: 0.2s; }
+        .nav-btn:hover { background: #475569; }
+        .nav-btn.danger { background: #7f1d1d; }
+        .nav-btn.primary { background: var(--primary); }
+        
+        #start-overlay, #how-to-play-overlay, #game-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 2000; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .modal-body { background: white; color: #0f172a; padding: 40px; border-radius: 12px; width: 100%; max-width: 550px; position: relative; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+        
+        .close-btn { position: absolute; top: 15px; right: 15px; background: #f1f5f9; border: none; font-size: 1.2rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; color: #64748b; display: flex; align-items: center; justify-content: center; }
+        .close-btn:hover { background: #e2e8f0; color: var(--danger); }
+
+        .game-header { width: 100%; max-width: 800px; background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px; position: sticky; top: 5px; z-index: 100; }
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .controls-left { display: flex; gap: 10px; align-items: center; }
+        
+        .progress-bg { background: #334155; height: 10px; border-radius: 5px; overflow: hidden; }
+        #progress-fill { background: var(--success); width: 0%; height: 100%; transition: 0.4s; }
+
+        .contract-container { background: var(--paper); color: var(--ink); padding: 50px; max-width: 800px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.6); line-height: 1.8; font-size: 1.1rem; min-height: 600px; }
+        .red-flag { background-color: var(--hl-pending); cursor: pointer; border-radius: 3px; padding: 0 2px; border-bottom: 1px dashed #94a3b8; }
+        .found { background-color: var(--hl-found) !important; color: var(--success) !important; text-decoration: line-through !important; pointer-events: none; }
+        
+        .choice-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; text-align: left; cursor: pointer; }
+        .choice-btn:hover { background: #eff6ff; border-color: var(--primary); }
+        
+        select.in-game-select { background: #0f172a; color: white; border: 1px solid #334155; padding: 6px; border-radius: 4px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<!-- Main Menu -->
+<div id="start-overlay">
+    <div style="text-align: center;">
+        <h1>LEGAL AUDITOR PRO</h1>
+        <p style="color: #94a3b8; margin-bottom: 30px;">Certified Compliance Simulator | Vancouver 2026</p>
+        <select id="initial-diff" style="padding: 12px; width: 250px; margin-bottom: 20px;">
+            <option value="easy">Elementary Trade</option>
+            <option value="medium">Civil Law 12</option>
+            <option value="hard">Corporate M&A</option>
+        </select><br>
+        <button class="nav-btn primary" style="padding: 15px 40px;" onclick="showHowToPlay()">INITIALIZE AUDIT</button>
+    </div>
+</div>
+
+<!-- Instructions -->
+<div id="how-to-play-overlay" style="display: none;">
+    <div class="modal-body">
+        <h2 style="color: var(--primary);">Audit Instructions</h2>
+        <ul style="line-height: 1.8; font-size: 1.05rem;">
+            <li><strong>You are a legal auditor.</strong></li>
+            <li><strong>You need to fix the 10 errors</strong> provided by clicking on them.</li>
+            <li>A multiple choice menu will appear and you will <strong>pick one of four options</strong> to see which one is correct.</li>
+            <li>You are on a timer and <strong>if you don't fix the contract in time then you will lose.</strong></li>
+            <li>If you select an option incorrectly <strong>you lose 15 seconds of your time.</strong></li>
+        </ul>
+        <button class="nav-btn primary" style="width: 100%; margin-top: 10px;" onclick="startGame()">START MISSION</button>
+    </div>
+</div>
+
+<!-- Game UI -->
+<div id="game-view" style="display:none">
+    <div class="game-header">
+        <div class="top-row">
+            <div class="controls-left">
+                <button class="nav-btn danger" onclick="location.reload()">Exit</button>
+                <select id="game-diff-selector" class="in-game-select" onchange="resetGame(this.value)">
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+                <button class="nav-btn" onclick="shuffleAndReset()">New Scenario</button>
+            </div>
+            <div style="font-family: sans-serif;">Score: <span id="score-val">0</span> | Time: <span id="timer-val">120</span>s</div>
+        </div>
+        <div class="progress-bg"><div id="progress-fill"></div></div>
+    </div>
+    <div class="contract-container" id="contract-content"></div>
+</div>
+
+<!-- Multiple Choice Modal -->
+<div id="game-modal" style="display: none;">
+    <div class="modal-body">
+        <button class="close-btn" onclick="closeModal()">✕</button>
+        <h4 id="q-text" style="margin-top: 0;">Legal Issue Analysis</h4>
+        <div id="options"></div>
+    </div>
+</div>
+
+<script>
+    // 15 Scenario Bank
+    const scenarioBank = {
+        easy: [
+            { id: 'e1', text: `<h2>THE PLAYGROUND SWAP</h2><p>Billy agrees to trade his bike to <span class="red-flag" data-id="1">Little Timmy (age 4)</span>. Timmy pays with <span class="red-flag" data-id="2">bottles of stolen rum</span>. Billy claims the bike <span class="red-flag" data-id="3">is made of pure diamond</span>. There is <span class="red-flag" data-id="4">no price mentioned</span> for the helmet. Both boys <span class="red-flag" data-id="5">think the bike can fly</span>. Billy is <span class="red-flag" data-id="6">twisting Timmy's ear</span> to sign. Billy told Timmy this was <span class="red-flag" data-id="7">a drawing of a cat</span>. Timmy is <span class="red-flag" data-id="8">currently sleepwalking</span>. Billy promises the bike <span class="red-flag" data-id="9">cures the common cold</span>. Clause 10 <span class="red-flag" data-id="10">bans Timmy from the park forever</span>.</p>` },
+            { id: 'e2', text: `<h2>PET SHOP MISHAP</h2><p>Signed by <span class="red-flag" data-id="1">a newborn baby</span>. The animal traded is a <span class="red-flag" data-id="2">protected endangered tiger</span>. Shop owner says the tiger <span class="red-flag" data-id="3">can speak French</span>. The receipt shows <span class="red-flag" data-id="4">a cost of zero dollars</span>. Both parties <span class="red-flag" data-id="5">believe the tiger is a kitten</span>. Owner is <span class="red-flag" data-id="6">poking the buyer with a stick</span>. Owner says this paper is <span class="red-flag" data-id="7">a grocery list</span>. Buyer is <span class="red-flag" data-id="8">under heavy sedation</span>. Owner says the cat <span class="red-flag" data-id="9">lays golden eggs</span>. Clause 10 <span class="red-flag" data-id="10">requires the buyer to give up their house</span>.</p>` },
+            { id: 'e3', text: `<h2>THE CANDY CARTEL</h2><p>Contract with <span class="red-flag" data-id="1">a kindergartner</span>. Trading for <span class="red-flag" data-id="2">unlabeled toxic chemicals</span>. Seller says the sugar <span class="red-flag" data-id="3">grants eternal life</span>. The contract <span class="red-flag" data-id="4">has no consideration</span> listed. Both <span class="red-flag" data-id="5">think the candy is explosive</span>. Seller is <span class="red-flag" data-id="6">threatening to break a toy</span>. Seller says the contract is <span class="red-flag" data-id="7">a coloring book page</span>. Buyer is <span class="red-flag" data-id="8">suffering from a fever dream</span>. Seller says it <span class="red-flag" data-id="9">makes you invisible</span>. Clause 10 <span class="red-flag" data-id="10">waives the right to ever eat again</span>.</p>` },
+            { id: 'e4', text: `<h2>THE TREEHOUSE LEASE</h2><p>Leased to <span class="red-flag" data-id="1">a 6-year-old</span>. Used to <span class="red-flag" data-id="2">store smuggled fireworks</span>. Owner says the tree <span class="red-flag" data-id="3">is 1000 years old</span>. There is <span class="red-flag" data-id="4">no rent to be paid</span>. Both <span class="red-flag" data-id="5">think the tree is made of candy</span>. Owner is <span class="red-flag" data-id="6">shoving the tenant</span>. Owner says this is <span class="red-flag" data-id="7">a secret code</span>. Tenant is <span class="red-flag" data-id="8">currently hypnotized</span>. Owner says the tree <span class="red-flag" data-id="9">can teleport</span>. Clause 10 <span class="red-flag" data-id="10">prohibits talking to parents</span>.</p>` },
+            { id: 'e5', text: `<h2>TOY CAR SALE</h2><p>Sold to <span class="red-flag" data-id="1">a preschooler</span>. Swapped for <span class="red-flag" data-id="2">forged lunch coupons</span>. Seller says the car <span class="red-flag" data-id="3">has a real jet engine</span>. The car <span class="red-flag" data-id="4">is free of charge</span>. Both <span class="red-flag" data-id="5">think it's a real Tesla</span>. Seller is <span class="red-flag" data-id="6">pinching the buyer</span>. Seller says this is <span class="red-flag" data-id="7">a birthday card</span>. Buyer is <span class="red-flag" data-id="8">asleep on the floor</span>. Seller says it <span class="red-flag" data-id="9">travels through time</span>. Clause 10 <span class="red-flag" data-id="10">orders the buyer to leave the country</span>.</p>` }
+        ],
+        medium: [
+            { id: 'm1', text: `<h2>APARTMENT LEASE 4B</h2><p>Tenant is a <span class="red-flag" data-id="1">13-year-old runaway</span>. Unit is used for <span class="red-flag" data-id="2">unlicensed surgery</span>. Landlord <span class="red-flag" data-id="3">lied about the lead paint</span>. Landlord is <span class="red-flag" data-id="4">incapacitated by dementia</span>. Tenant was <span class="red-flag" data-id="5">blackmailed with photos</span>. Landlord used <span class="red-flag" data-id="6">physical intimidation</span>. Tenant thought this was <span class="red-flag" data-id="7">a mail receipt</span>. Rent is <span class="red-flag" data-id="8">set at zero dollars</span>. Both <span class="red-flag" data-id="9">think the unit is in Paris</span>. Clause 10 <span class="red-flag" data-id="10">waives all human rights</span>.</p>` },
+            { id: 'm2', text: `<h2>USED AUTO BILL</h2><p>Sold to <span class="red-flag" data-id="1">a minor</span>. Intended for <span class="red-flag" data-id="2">getaway driving</span>. Seller <span class="red-flag" data-id="3">faked the odometer</span>. Seller is <span class="red-flag" data-id="4">declared legally dead</span>. Buyer signed <span class="red-flag" data-id="5">at gunpoint</span>. Influenced by <span class="red-flag" data-id="6">extortion</span>. Thought it was <span class="red-flag" data-id="7">a pizza order</span>. No <span class="red-flag" data-id="8">payment was received</span>. Both <span class="red-flag" data-id="9">think the car is a submarine</span>. Clause 10 <span class="red-flag" data-id="10">allows the seller to steal it back</span>.</p>` },
+            { id: 'm3', text: `<h2>EMPLOYMENT DEED</h2><p>Employee is <span class="red-flag" data-id="1">under legal age</span>. Work involves <span class="red-flag" data-id="2">money laundering</span>. Boss <span class="red-flag" data-id="3">lied about the salary</span>. Boss is <span class="red-flag" data-id="4">too drunk to stand</span>. Signed under <span class="red-flag" data-id="5">coercion</span>. Recruited via <span class="red-flag" data-id="6">threats of violence</span>. Employee thought it was <span class="red-flag" data-id="7">a survey</span>. There is <span class="red-flag" data-id="8">no pay listed</span>. Both <span class="red-flag" data-id="9">think the job is in space</span>. Clause 10 <span class="red-flag" data-id="10">bans the employee from quitting</span>.</p>` },
+            { id: 'm4', text: `<h2>LOAN AGREEMENT</h2><p>Borrower is <span class="red-flag" data-id="1">a school child</span>. Funds used for <span class="red-flag" data-id="2">buying illegal weapons</span>. Lender <span class="red-flag" data-id="3">hid the 500% interest</span>. Lender is <span class="red-flag" data-id="4">under a coma</span>. Signed while <span class="red-flag" data-id="5">kidnapped</span>. Debt enforced by <span class="red-flag" data-id="6">thugs</span>. Borrower thought it was <span class="red-flag" data-id="7">a fan letter</span>. No <span class="red-flag" data-id="8">interest is actually calculated</span>. Both <span class="red-flag" data-id="9">think the money is play-money</span>. Clause 10 <span class="red-flag" data-id="10">permits kidney seizure</span>.</p>` },
+            { id: 'm5', text: `<h2>SERVICE CONTRACT</h2><p>Provider is <span class="red-flag" data-id="1">unlicensed and 12</span>. Services include <span class="red-flag" data-id="2">hacking the pentagon</span>. Client <span class="red-flag" data-id="3">lied about the budget</span>. Client is <span class="red-flag" data-id="4">mentally unstable</span>. Provider was <span class="red-flag" data-id="5">pressured by a gang</span>. Signed via <span class="red-flag" data-id="6">duress</span>. Thought it was <span class="red-flag" data-id="7">a gym waiver</span>. No <span class="red-flag" data-id="8">fee was agreed upon</span>. Both <span class="red-flag" data-id="9">think they are in a video game</span>. Clause 10 <span class="red-flag" data-id="10">forbids the provider from seeing family</span>.</p>` }
+        ],
+        hard: [
+            { id: 'h1', text: `<h2>M&A MERGER DEED</h2><p>Target firm is <span class="red-flag" data-id="1">a shell company</span>. CEO is <span class="red-flag" data-id="2">under criminal indictment</span>. Assets are <span class="red-flag" data-id="3">fictional gold reserves</span>. Audit was <span class="red-flag" data-id="4">intentionally falsified</span>. Payment made in <span class="red-flag" data-id="5">stolen crypto</span>. Deal involves <span class="red-flag" data-id="6">insider trading</span>. Board was <span class="red-flag" data-id="7">held hostage</span>. Signer thought it was <span class="red-flag" data-id="8">an RSVP</span>. CEO <span class="red-flag" data-id="9">lacked legal authority</span>. Clause 10 <span class="red-flag" data-id="10">dissolves the national government</span>.</p>` },
+            { id: 'h2', text: `<h2>SHIPPING LOGISTICS</h2><p>Carrier is <span class="red-flag" data-id="1">a non-existent entity</span>. Cargo is <span class="red-flag" data-id="2">illegal radioactive waste</span>. Captain <span class="red-flag" data-id="3">lied about the route</span>. Owner is <span class="red-flag" data-id="4">bankrupt and insane</span>. Signed under <span class="red-flag" data-id="5">torture</span>. Secured by <span class="red-flag" data-id="6">piracy</span>. Thought it was <span class="red-flag" data-id="7">a menu</span>. No <span class="red-flag" data-id="8">freight cost determined</span>. Both <span class="red-flag" data-id="9">believe the boat is a plane</span>. Clause 10 <span class="red-flag" data-id="10">overrides all maritime law</span>.</p>` },
+            { id: 'h3', text: `<h2>TECH PATENT SALE</h2><p>Inventor is <span class="red-flag" data-id="1">dead</span>. Patent is <span class="red-flag" data-id="2">stolen from NASA</span>. Buyer <span class="red-flag" data-id="3">used fake credentials</span>. Seller is <span class="red-flag" data-id="4">incompetent</span>. Deal made during <span class="red-flag" data-id="5">a riot</span>. Enforced by <span class="red-flag" data-id="6">spyware</span>. Signer thought it was <span class="red-flag" data-id="7">a login screen</span>. No <span class="red-flag" data-id="8">royalties included</span>. Both <span class="red-flag" data-id="9">think the tech is alien</span>. Clause 10 <span class="red-flag" data-id="10">claims ownership of the moon</span>.</p>` },
+            { id: 'h4', text: `<h2>GOVERNMENT TENDER</h2><p>Agency is <span class="red-flag" data-id="1">a front for spies</span>. Project is <span class="red-flag" data-id="2">biological warfare</span>. Director <span class="red-flag" data-id="3">lied to Parliament</span>. Contractor is <span class="red-flag" data-id="4">hallucinating</span>. Signed via <span class="red-flag" data-id="5">blackmail</span>. Competitive bid was <span class="red-flag" data-id="6">rigged</span>. Thought it was <span class="red-flag" data-id="7">a tax form</span>. No <span class="red-flag" data-id="8">budget allocated</span>. Both <span class="red-flag" data-id="9">think they are in 1920</span>. Clause 10 <span class="red-flag" data-id="10">repeals the Constitution</span>.</p>` },
+            { id: 'h5', text: `<h2>OIL RIG LEASE</h2><p>Rig is <span class="red-flag" data-id="1">already at the bottom of the sea</span>. Driller is <span class="red-flag" data-id="2">funding terrorism</span>. Geology report <span class="red-flag" data-id="3">is a total lie</span>. Landlord is <span class="red-flag" data-id="4">unconscious</span>. Signed while <span class="red-flag" data-id="5">at sea without comms</span>. Forged via <span class="red-flag" data-id="6">threats</span>. Thought it was <span class="red-flag" data-id="7">a diary entry</span>. No <span class="red-flag" data-id="8">payment terms found</span>. Both <span class="red-flag" data-id="9">believe they found Mars</span>. Clause 10 <span class="red-flag" data-id="10">bans the use of water</span>.</p>` }
+        ]
+    };
+
+    const masterData = {
+        "1": { q: "Analyze Capacity:", options: ["Lack of Capacity", "Standing", "Licensing", "Minority Error"], correct: "Lack of Capacity" },
+        "2": { q: "Analyze Purpose:", options: ["Illegal Purpose", "Gift", "Bonus", "Trade Error"], correct: "Illegal Purpose" },
+        "3": { q: "Analyze Honesty:", options: ["Fraud", "Puffery", "Mistake", "Opinion"], correct: "Fraud" },
+        "4": { q: "Analyze Consideration:", options: ["Lack of Consideration", "Discount", "Gift", "Equity"], correct: "Lack of Consideration" },
+        "5": { q: "Analyze Beliefs:", options: ["Mutual Mistake", "Fact", "Error", "Design"], correct: "Mutual Mistake" },
+        "6": { q: "Analyze Pressure:", options: ["Duress", "Negotiation", "Bargain", "Hardship"], correct: "Duress" },
+        "7": { q: "Analyze Document:", options: ["Non Est Factum", "Mistake", "Art", "Forgery"], correct: "Non Est Factum" },
+        "8": { q: "Analyze Awareness:", options: ["Incapacity", "Fatigue", "Focus", "Implied"], correct: "Incapacity" },
+        "9": { q: "Analyze Promises:", options: ["Fraud", "Future", "Hope", "Goal"], correct: "Fraud" },
+        "10": { q: "Analyze Policy:", options: ["Public Policy", "Privacy", "Security", "Bond"], correct: "Public Policy" }
+    };
+
+    let score = 0, timeLeft = 120, foundCount = 0, timer, currentDiff = 'easy', lastId = '';
+
+    function showHowToPlay() { document.getElementById('start-overlay').style.display = 'none'; document.getElementById('how-to-play-overlay').style.display = 'flex'; }
+    
+    function startGame() { 
+        currentDiff = document.getElementById('initial-diff').value;
+        document.getElementById('how-to-play-overlay').style.display = 'none'; 
+        document.getElementById('game-view').style.display = 'block'; 
+        document.getElementById('game-diff-selector').value = currentDiff;
+        resetGame(currentDiff); 
+    }
+
+    function shuffleAndReset() { resetGame(currentDiff); }
+    function closeModal() { document.getElementById('game-modal').style.display = 'none'; }
+
+    function resetGame(diff) {
+        currentDiff = diff; score = 0; foundCount = 0;
+        timeLeft = (diff === 'easy' ? 150 : (diff === 'medium' ? 120 : 90));
+        clearInterval(timer);
+        
+        const pool = scenarioBank[diff];
+        let pick;
+        do { pick = pool[Math.floor(Math.random() * pool.length)]; } while (pick.id === lastId);
+        lastId = pick.id;
+        
+        document.getElementById('contract-content').innerHTML = pick.text;
+        document.querySelectorAll('.red-flag').forEach(f => f.onclick = () => handleFlag(f));
+        document.getElementById('timer-val').innerText = timeLeft;
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('progress-fill').style.width = "0%";
+
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-val').innerText = timeLeft;
+            if (timeLeft <= 0) endGame("AUDIT FAILED - OUT OF TIME");
+        }, 1000);
+    }
+
+    function handleFlag(f) {
+        if (f.classList.contains('found')) return;
+        const data = masterData[f.dataset.id];
+        const modal = document.getElementById('game-modal');
+        const opts = document.getElementById('options');
+        document.getElementById('q-text').innerText = "Legal Issue: " + f.innerText;
+        opts.innerHTML = '';
+        
+        [...data.options].sort(() => Math.random() - 0.5).forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'choice-btn'; b.innerText = o;
+            b.onclick = () => {
+                if (o === data.correct) {
+                    f.classList.add('found'); foundCount++; score += 1000;
+                    document.getElementById('progress-fill').style.width = (foundCount * 10) + "%";
+                    modal.style.display = 'none';
+                    if (foundCount === 10) endGame("AUDIT COMPLETE - CONTRACT VOIDED");
+                } else {
+                    timeLeft -= 15; alert("-15 Seconds: Incorrect Legal Analysis!"); modal.style.display = 'none';
+                }
+            };
+            opts.appendChild(b);
+        });
+        modal.style.display = 'flex';
+    }
+
+    function endGame(m) { clearInterval(timer); alert(m + "\nFinal Score: " + score); location.reload(); }
+</script>
+</body>
+</html>
