@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legally Void: Auditor Pro</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --bg: #0f172a;
+            --paper: #ffffff;
+            --ink: #1e293b;
+            --hl-pending: rgba(254, 240, 138, 0.4);
+            --hl-hover: rgba(253, 224, 71, 0.7);
+            --hl-found: rgba(34, 197, 94, 0.3);
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            background-color: var(--bg);
+            color: #f8fafc;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* UI Overlays */
+        #start-overlay, #how-to-play-overlay, #game-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-body {
+            background: white;
+            color: #0f172a;
+            padding: 30px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 450px;
+            position: relative;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f1f5f9;
+            border: none;
+            font-size: 1.2rem;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            line-height: 30px;
+            text-align: center;
+        }
+
+        .close-btn:hover { background: #e2e8f0; color: var(--danger); }
+
+        /* Game View */
+        .game-header {
+            width: 100%;
+            max-width: 700px;
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            position: sticky;
+            top: 5px;
+            z-index: 100;
+        }
+
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .progress-bg { background: #334155; height: 8px; border-radius: 4px; overflow: hidden; }
+        #progress-fill { background: var(--success); width: 0%; height: 100%; transition: 0.4s; }
+
+        .contract-container {
+            background: var(--paper);
+            color: var(--ink);
+            padding: 60px 50px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            line-height: 1.8;
+            font-size: 1.05rem;
+            text-align: justify;
+        }
+
+        h2 { text-align: center; text-transform: uppercase; border-bottom: 2px solid #334155; padding-bottom: 10px; }
+        .section-title { font-weight: bold; display: block; margin-top: 25px; text-transform: uppercase; font-size: 0.85rem; color: #64748b; }
+
+        .red-flag { background-color: var(--hl-pending); cursor: pointer; transition: 0.2s; border-radius: 2px; }
+        .red-flag:hover { background-color: var(--hl-hover); }
+        .found { background-color: var(--hl-found) !important; color: var(--success) !important; text-decoration: line-through !important; cursor: default; }
+
+        .choice-btn {
+            display: block; width: 100%; padding: 14px; margin: 10px 0;
+            border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;
+            text-align: left; cursor: pointer; font-family: sans-serif;
+        }
+        .choice-btn:hover { background: #f1f5f9; border-color: var(--primary); }
+
+        .btn-main {
+            padding: 15px 40px; border-radius: 30px; border: none;
+            background: var(--primary); color: white; font-weight: bold; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 1. Difficulty Selection Overlay -->
+<div id="start-overlay">
+    <div style="text-align: center;">
+        <h1 style="letter-spacing: 2px;">LEGAL AUDITOR PRO</h1>
+        <p style="color: #94a3b8; margin-bottom: 20px;">Select case complexity to proceed.</p>
+        <select id="initial-diff" style="padding: 12px; width: 250px; border-radius: 8px; margin-bottom: 20px;">
+            <option value="easy">Elementary Trade</option>
+            <option value="medium">Civil Law 12</option>
+            <option value="hard">Corporate M&A</option>
+        </select><br>
+        <button class="btn-main" onclick="showHowToPlay()">INITIALIZE</button>
+    </div>
+</div>
+
+<!-- 2. How to Play Overlay (X button included) -->
+<div id="how-to-play-overlay" style="display: none;">
+    <div class="modal-body">
+        <button class="close-btn" onclick="closeHowToPlay()">×</button>
+        <h2 style="color: var(--primary); border: none; text-align: left;">Audit Briefing</h2>
+        <p><strong>Objective:</strong> You are a Senior Legal Auditor. You must identify and classify <strong>10 invalidating factors</strong> within the provided contract before the timer expires.</p>
+        <p><strong>How to Play:</strong></p>
+        <ul style="padding-left: 20px;">
+            <li>Review the contract for <strong>highlighted</strong> text.</li>
+            <li>Click a highlight to open the <strong>Legal Analysis</strong> menu.</li>
+            <li>Select the correct legal reason why that clause is void.</li>
+            <li><strong>Careful:</strong> Incorrect classifications result in a <strong>15-second time penalty</strong>.</li>
+        </ul>
+        <button class="btn-main" style="width: 100%; margin-top: 10px;" onclick="startGame()">START AUDIT</button>
+    </div>
+</div>
+
+<!-- 3. Main Game View -->
+<div id="game-view" style="display:none">
+    <div class="game-header">
+        <div class="top-row">
+            <select id="diff-selector" onchange="resetGame(this.value)">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+            <div style="display: flex; gap: 20px;">
+                <div>Score: <span id="score-val" style="color:var(--primary); font-weight:bold;">0</span></div>
+                <div>Time: <span id="timer-val" style="color:var(--primary); font-weight:bold;">120</span>s</div>
+            </div>
+        </div>
+        <div class="progress-bg"><div id="progress-fill"></div></div>
+    </div>
+    <div class="contract-container" id="contract-content"></div>
+</div>
+
+<!-- 4. Multiple Choice Modal (X button added) -->
+<div id="game-modal" style="display: none;">
+    <div class="modal-body">
+        <button class="close-btn" onclick="closeModal()">×</button>
+        <h4 id="q-text" style="margin-top:0; color: #64748b; font-size: 0.8rem; text-transform: uppercase;">Defect Analysis:</h4>
+        <div id="options"></div>
+    </div>
+</div>
+
+<script>
+    const levels = {
+        easy: {
+            title: "Playground Trade Agreement",
+            text: `<h2>TRADE DEED</h2><p>Between Billy and <span class="red-flag" data-id="1">Little Timmy (age 5)</span>. Timmy agrees to trade his bike for <span class="red-flag" data-id="2">stolen candy</span>. Billy claims the bike <span class="red-flag" data-id="3">is made of real gold</span>. The contract specifies <span class="red-flag" data-id="4">zero payment</span> for the helmet. Both think the bike <span class="red-flag" data-id="5">is a transformer</span>. Billy is <span class="red-flag" data-id="6">holding Timmy's toy over a sewer</span> to get the signature. Billy said this was <span class="red-flag" data-id="7">a drawing of a dog</span>. Timmy is <span class="red-flag" data-id="8">currently sleepwalking</span>. Billy says the bike <span class="red-flag" data-id="9">will let Timmy fly</span>. Clause 10 says Timmy <span class="red-flag" data-id="10">can never talk to his parents</span>.</p>`,
+            data: {
+                "1": { q: "Minor status?", options: ["Lack of Capacity", "No License", "Age Error", "Standard"], correct: "Lack of Capacity" },
+                "2": { q: "Stolen candy?", options: ["Illegal Consideration", "Bonus", "Gift", "Taxable"], correct: "Illegal Consideration" },
+                "3": { q: "Gold lie?", options: ["Fraud", "Puffery", "Mistake", "Opinion"], correct: "Fraud" },
+                "4": { q: "No payment?", options: ["Lack of Consideration", "Discount", "Gift", "Equity"], correct: "Lack of Consideration" },
+                "5": { q: "Transformer error?", options: ["Mutual Mistake", "Fact", "Unilateral", "Design"], correct: "Mutual Mistake" },
+                "6": { q: "Toy threat?", options: ["Duress", "Negotiation", "Bargain", "Tort"], correct: "Duress" },
+                "7": { q: "Dog drawing lie?", options: ["Non Est Factum", "Art", "Mistake", "Fraud"], correct: "Non Est Factum" },
+                "8": { q: "Sleepwalking?", options: ["No Capacity", "Focus", "Implied", "Meditation"], correct: "No Capacity" },
+                "9": { q: "Flying promise?", options: ["Fraud", "Future", "Hope", "Goal"], correct: "Fraud" },
+                "10": { q: "No parents rule?", options: ["Public Policy", "Privacy", "Security", "Bond"], correct: "Public Policy" }
+            }
+        },
+        medium: {
+            title: "Residential Lease",
+            text: `<h2>LEASE AGREEMENT</h2><p>Lease with a <span class="red-flag" data-id="1">15-year-old</span> for a house used to <span class="red-flag" data-id="2">store illegal fireworks</span>. Landlord <span class="red-flag" data-id="3">hid a broken foundation</span>. Landlord is <span class="red-flag" data-id="4">declared mentally unfit</span>. Tenant was <span class="red-flag" data-id="5">threatened with eviction from another home</span> to sign. A guardian used <span class="red-flag" data-id="6">emotional blackmail</span>. Tenant thought it was <span class="red-flag" data-id="7">a phone contract</span>. Rent is $1 because Tenant <span class="red-flag" data-id="8">fooled the illiterate Landlord</span>. Both <span class="red-flag" data-id="9">think the house is in Paris</span>, but it's in Surrey. Clause 10 <span class="red-flag" data-id="10">allows the Landlord to lock the Tenant in a room</span>.</p>`,
+            data: {
+                "1": { q: "Age?", options: ["Lack of Capacity", "Minor", "Standing", "Void"], correct: "Lack of Capacity" },
+                "2": { q: "Illegal fireworks?", options: ["Illegal Purpose", "Storage", "Zoning", "Safety"], correct: "Illegal Purpose" },
+                "3": { q: "Broken foundation?", options: ["Fraud", "Caveat Emptor", "Defect", "Neglect"], correct: "Fraud" },
+                "4": { q: "Mentally unfit?", options: ["Incapacity", "Error", "License", "Medication"], correct: "Incapacity" },
+                "5": { q: "Eviction threat?", options: ["Duress", "Leverage", "Equity", "Hardship"], correct: "Duress" },
+                "6": { q: "Blackmail?", options: ["Undue Influence", "Moral", "Family", "Pressure"], correct: "Undue Influence" },
+                "7": { q: "Phone contract lie?", options: ["Non Est Factum", "Mistake", "Parol", "Fraud"], correct: "Non Est Factum" },
+                "8": { q: "Illiteracy exploit?", options: ["Unconscionability", "Gift", "Bargain", "Equity"], correct: "Unconscionability" },
+                "9": { q: "Paris/Surrey error?", options: ["Mutual Mistake", "Geography", "Fact", "Locus"], correct: "Mutual Mistake" },
+                "10": { q: "Locking Tenant?", options: ["Public Policy", "Security", "House Rules", "Tort"], correct: "Public Policy" }
+            }
+        },
+        hard: {
+            title: "Corporate SPA",
+            text: `<h2>SHARE PURCHASE DEED</h2><p>Signed by <span class="red-flag" data-id="1">Agent of a bankrupt shell</span>. CEO is <span class="red-flag" data-id="2">under a medical guardianship</span>. Assets are <span class="red-flag" data-id="3">shares in a company that went bust yesterday</span>. Vendor <span class="red-flag" data-id="4">forged the bank statements</span>. Payment is <span class="red-flag" data-id="5">counterfeit stocks</span>. Terms include <span class="red-flag" data-id="6">a global price-fixing pact</span>. Director was <span class="red-flag" data-id="7">threatened at a secret location</span>. Bank <span class="red-flag" data-id="8">forced the sale to cover debt</span>. Signer thought it was <span class="red-flag" data-id="9">a birthday card</span>. Clause 10 <span class="red-flag" data-id="10">waives all minimum wage laws</span>.</p>`,
+            data: {
+                "1": { q: "Bankrupt shell?", options: ["No Standing", "Agency", "Veil", "Liability"], correct: "No Standing" },
+                "2": { q: "Guardianship?", options: ["Incapacity", "Power", "Medication", "Ward"], correct: "Incapacity" },
+                "3": { q: "Bust company?", options: ["Mutual Mistake", "Frustration", "Equity", "Risk"], correct: "Mutual Mistake" },
+                "4": { q: "Forged statements?", options: ["Fraud", "Accounting", "Error", "Puffery"], correct: "Fraud" },
+                "5": { q: "Counterfeit stocks?", options: ["Illegal Consideration", "Bad Debt", "Paper", "Risk"], correct: "Illegal Consideration" },
+                "6": { q: "Price-fixing?", options: ["Antitrust", "Synergy", "Market", "Growth"], correct: "Antitrust" },
+                "7": { q: "Secret threat?", options: ["Physical Duress", "Leverage", "Contempt", "Secrecy"], correct: "Physical Duress" },
+                "8": { q: "Forced debt sale?", options: ["Undue Influence", "Economic", "Security", "Finance"], correct: "Undue Influence" },
+                "9": { q: "Birthday card lie?", options: ["Non Est Factum", "Mistake", "Error", "Fraud"], correct: "Non Est Factum" },
+                "10": { q: "No wage laws?", options: ["Public Policy", "Exempt", "Labor", "Severance"], correct: "Public Policy" }
+            }
+        }
+    };
+
+    let score = 0, timeLeft = 120, foundCount = 0, timer, currentDiff = 'easy';
+
+    function showHowToPlay() {
+        document.getElementById('start-overlay').style.display = 'none';
+        document.getElementById('how-to-play-overlay').style.display = 'flex';
+    }
+
+    function closeHowToPlay() {
+        document.getElementById('how-to-play-overlay').style.display = 'none';
+        document.getElementById('start-overlay').style.display = 'flex';
+    }
+
+    function startGame() {
+        const d = document.getElementById('initial-diff').value;
+        document.getElementById('how-to-play-overlay').style.display = 'none';
+        document.getElementById('game-view').style.display = 'block';
+        document.getElementById('diff-selector').value = d;
+        resetGame(d);
+    }
+
+    function resetGame(diff) {
+        currentDiff = diff;
+        score = 0; foundCount = 0;
+        timeLeft = (diff === 'easy') ? 150 : (diff === 'medium' ? 120 : 100);
+        clearInterval(timer);
+        
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('timer-val').innerText = timeLeft;
+        document.getElementById('progress-fill').style.width = "0%";
+        document.getElementById('contract-content').innerHTML = levels[diff].text;
+        
+        document.querySelectorAll('.red-flag').forEach(flag => {
+            flag.onclick = () => handleFlagClick(flag);
+        });
+
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-val').innerText = timeLeft;
+            if (timeLeft <= 0) endGame("AUDIT EXPIRED");
+        }, 1000);
+    }
+
+    function handleFlagClick(flag) {
+        if (flag.classList.contains('found')) return;
+        const info = levels[currentDiff].data[flag.dataset.id];
+        const modal = document.getElementById('game-modal');
+        const optsContainer = document.getElementById('options');
+        
+        document.getElementById('q-text').innerText = "Analyzing Highlight: " + flag.innerText;
+        optsContainer.innerHTML = '';
+        
+        // Shuffle the options
+        const shuffled = [...info.options].sort(() => Math.random() - 0.5);
+        shuffled.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'choice-btn';
+            b.innerText = o;
+            b.onclick = () => {
+                if (o === info.correct) {
+                    flag.classList.add('found');
+                    foundCount++;
+                    score += 1000;
+                    updateUI();
+                    modal.style.display = 'none';
+                    if (foundCount === 10) endGame("CONTRACT VOIDED!");
+                } else {
+                    timeLeft -= 15;
+                    alert("LEGAL ERROR: -15s Penalty.");
+                    modal.style.display = 'none';
+                }
+            };
+            optsContainer.appendChild(b);
+        });
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('game-modal').style.display = 'none'; }
+
+    function updateUI() {
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('progress-fill').style.width = (foundCount / 10 * 100) + "%";
+    }
+
+    function endGame(msg) {
+        clearInterval(timer);
+        alert(msg + "\nPoints: " + score);
+        document.getElementById('start-overlay').style.display = 'flex';
+        document.getElementById('game-view').style.display = 'none';
+    }
+</script>
+</body>
+</html>
